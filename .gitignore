@@ -1,0 +1,7 @@
+"node_modules/" | Out-File -FilePath .gitignore -Encoding ascii
+"frontend/node_modules/" | Out-File -FilePath .gitignore -Append -Encoding ascii
+"backend/node_modules/" | Out-File -FilePath .gitignore -Append -Encoding ascii
+".env" | Out-File -FilePath .gitignore -Append -Encoding ascii
+"dist/" | Out-File -FilePath .gitignore -Append -Encoding ascii
+".angular/" | Out-File -FilePath .gitignore -Append -Encoding ascii
+"*.log" | Out-File -FilePath .gitignore -Append -Encoding ascii
