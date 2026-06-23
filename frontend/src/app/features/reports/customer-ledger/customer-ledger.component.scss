@@ -1,0 +1,145 @@
+:host { display: block; padding: 20px 24px; color: #0f172a; }
+
+.page-head { margin-bottom: 16px; }
+.page-head h2 {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 18px; font-weight: 700; margin: 0;
+}
+.page-head h2 mat-icon { color: #4f46e5; font-size: 22px; width: 22px; height: 22px; }
+.page-head .hint { font-size: 12.5px; color: #64748b; margin: 4px 0 0; max-width: 720px; }
+
+// ── Filter card (local, since Customer Ledger has different filter shape) ──
+.filter-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 14px;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #475569;
+  min-width: 0;
+  > span { font-weight: 600; letter-spacing: 0.01em; }
+  &.col-2 { grid-column: span 2; }
+
+  input, select {
+    height: 30px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0 8px;
+    font: 12.5px 'Inter', system-ui, sans-serif;
+    color: #0f172a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.12s, box-shadow 0.12s;
+  }
+  input:focus, select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+  }
+}
+.filter-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid #f1f5f9;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px;
+  padding: 0 14px; height: 30px;
+  font: 600 12px 'Inter', system-ui, sans-serif; color: #475569;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; line-height: 15px; }
+  &:hover:not([disabled]) { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+  &[disabled] { color: #cbd5e1; cursor: default; border-color: #e2e8f0; }
+  &.ghost { background: transparent; }
+  &.primary {
+    background: #4f46e5; color: white; border-color: #4338ca;
+    box-shadow: 0 1px 2px rgba(79, 70, 229, 0.25);
+  }
+  &.primary:hover:not([disabled]) {
+    background: #4338ca; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.35);
+  }
+}
+
+// ── Master block (sub-report parent) ──────────────────────────────────────
+.master-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 2px rgba(99, 102, 241, 0.08);
+}
+.m-row {
+  display: flex;
+  gap: 36px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  &:last-child { margin-bottom: 0; }
+}
+.m-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  &.wide { flex: 1; }
+}
+.m-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #6366f1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.m-value {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 500;
+  &.strong { font-weight: 700; font-size: 15px; }
+  &.mono   { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+}
+.m-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+// Hint card before any search
+.hint-card {
+  display: flex; align-items: center; gap: 12px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 14px 18px;
+  color: #312e81;
+  font-size: 13px;
+  mat-icon { font-size: 22px; width: 22px; height: 22px; color: #4f46e5; }
+  strong { display: block; font-size: 13.5px; }
+  p { margin: 2px 0 0; font-size: 12px; color: #4338ca; opacity: 0.85; }
+}
+
+// Empty state for "account not found"
+.state.empty {
+  padding: 48px 24px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #94a3b8;
+  mat-icon { font-size: 44px; width: 44px; height: 44px; color: #cbd5e1; }
+  h3 { font-size: 14px; font-weight: 700; color: #475569; margin: 10px 0 0; }
+}
+
+@media (max-width: 980px) { .filter-grid { grid-template-columns: repeat(2, 1fr); } label.col-2 { grid-column: span 2; } }
+@media (max-width: 600px) { .filter-grid { grid-template-columns: 1fr; } label.col-2 { grid-column: span 1; } }

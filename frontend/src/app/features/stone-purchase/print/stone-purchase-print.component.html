@@ -1,0 +1,187 @@
+<div class="print-toolbar no-print">
+  <button (click)="onBack()"   class="tb-btn"><mat-icon>arrow_back</mat-icon><span>Back</span></button>
+  <span class="spacer"></span>
+  <button (click)="onPrint()"  class="tb-btn"   [disabled]="loading() || !!error() || !data()">
+    <mat-icon>print</mat-icon><span>Print</span>
+  </button>
+  <button (click)="onDownloadPdf()" class="tb-btn primary" [disabled]="loading() || !!error() || !data()">
+    <mat-icon>download</mat-icon><span>Download PDF</span>
+  </button>
+</div>
+
+@if (loading()) {
+  <div class="state-msg">Loading voucher…</div>
+}
+
+@if (error()) {
+  <div class="state-msg error">{{ error() }}</div>
+}
+
+@if (!loading() && !error() && data(); as d) {
+  <div class="voucher-page" [class.cancelled]="d.voucher.cancel === 1">
+
+    <!-- TITLE -->
+    <h1 class="vou-title">{{ title() }}</h1>
+
+    <!-- HEADER (party + voucher meta) -->
+    <table class="header-box">
+      <tr>
+        <td class="left-cell">
+          <div class="kv"><span class="k">GSTIN NO.</span><span class="v">{{ d.dealer?.gstin }}</span></div>
+          <div class="kv"><span class="k">State Code</span><span class="v">{{ d.dealer?.idState }}</span></div>
+
+          <div class="kv mt"><span class="k">Name    :</span><span class="v">{{ d.dealer?.name }}</span></div>
+          <div class="kv">   <span class="k">Address :</span><span class="v">{{ dealerAddress() }}</span></div>
+
+          <div class="ship-bill">(Ship &amp; Bill To)</div>
+          <div class="kv"><span class="k">GSTIN/UIN :</span><span class="v">{{ d.company?.gstinno }}</span></div>
+        </td>
+        <td class="right-cell">
+          <div class="kv"><span class="k">Voucher No. :</span><span class="v">{{ d.voucher.vounum }}</span></div>
+          <div class="kv"><span class="k">Voucher Date :</span><span class="v">{{ fmtDate(d.voucher.voudate) }}</span></div>
+          @if (d.voucher.refBillNo) {
+            <div class="kv"><span class="k">Ref. Bill No. :</span><span class="v">{{ d.voucher.refBillNo }}</span></div>
+          }
+          @if (d.voucher.refBillDate) {
+            <div class="kv"><span class="k">Ref. Bill Date :</span><span class="v">{{ fmtDate(d.voucher.refBillDate) }}</span></div>
+          }
+        </td>
+      </tr>
+    </table>
+
+    <!-- LINE ITEMS -->
+    <table class="line-grid">
+      <thead>
+        <tr>
+          <th class="c-sl">Sl No.</th>
+          <th class="c-code">Stone Code - Sub</th>
+          <th>Stone Name</th>
+          <th class="num c-pcs">Pcs</th>
+          <th class="num c-wt">Weight</th>
+          <th class="c-unit">Unit</th>
+          <th class="c-hsn">HSN CODE</th>
+          <th class="num c-rate">Rate</th>
+          <th class="num c-amt">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (l of d.stoneLines; track l.srl; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td>{{ l.stoneCode }} - {{ l.stoneSub }}</td>
+            <td>{{ l.description }}</td>
+            <td class="num">{{ l.pcs ?? 0 }}</td>
+            <td class="num">{{ (l.weight ?? 0).toFixed(3) }}</td>
+            <td class="center">{{ fmtUom(l.uom) }}</td>
+            <td>{{ l.hsncode || '' }}</td>
+            <td class="num">{{ fmt(l.rate) }}</td>
+            <td class="num">{{ fmt(l.amount) }}</td>
+          </tr>
+        }
+        <!-- Pad rows for visual consistency -->
+        @for (_ of padRows(); track $index) {
+          <tr class="pad-row"><td colspan="9">&nbsp;</td></tr>
+        }
+      </tbody>
+    </table>
+
+    <!-- FOOTER: Narration/In Word/Payment LEFT, Totals RIGHT -->
+    <table class="footer-box">
+      <tr>
+        <td class="footer-left">
+          <div class="kv mb"><span class="k">Narration :</span><span class="v">{{ d.voucher.narration }}</span></div>
+
+          <div class="kv mb"><span class="k">In Word :</span>
+            <span class="v italic">{{ fmtWords(d.voucher.grandTotal) }}</span>
+          </div>
+
+          <div class="pay-title">Payment Detail :</div>
+          @for (p of d.payments; track p.srl) {
+            @if (p.amount > 0) {
+              <div class="pay-row">
+                <span class="pay-acc">{{ p.accName }}</span>
+                @if (!isCashRow(p) && p.chno) {
+                  <span class="pay-chq">Cheque No. {{ p.chno }}
+                    @if (p.chdate) { &nbsp;Date {{ fmtDate(p.chdate) }} }
+                  </span>
+                } @else { <span class="pay-chq"></span> }
+                <span class="pay-amt">Rs. {{ fmt(p.amount) }}</span>
+              </div>
+            }
+          }
+        </td>
+        <td class="footer-right">
+          <table class="totals-box">
+            <tr><td>Total</td>       <td class="num">{{ fmt(stoneTotal()) }}</td></tr>
+            <tr><td>Discount</td>    <td class="num">{{ fmt(d.voucher.discAmt) }}</td></tr>
+            <tr><td>GST</td>         <td class="num">{{ fmt(d.voucher.taxAmt) }}</td></tr>
+            @if (d.voucher.vatAmt && d.voucher.vatAmt !== 0) {
+              <tr><td>VAT</td>       <td class="num">{{ fmt(d.voucher.vatAmt) }}</td></tr>
+            }
+            <tr><td>TCS</td>         <td class="num">{{ fmt(d.voucher.tcsAmt) }}</td></tr>
+            <tr><td>Round Off</td>   <td class="num">{{ fmt(d.voucher.roundOff) }}</td></tr>
+            <tr class="divider"><td><strong>Total Amt.</strong></td>
+                <td class="num"><strong>{{ fmt(d.voucher.grandTotal) }}</strong></td></tr>
+            <tr><td>Paid Amt.</td>   <td class="num">{{ fmt(paidTotal()) }}</td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- SIGNATURE ROW -->
+    <div class="sign-row">
+      <div class="sign-cell left">Signature Of Dealer</div>
+      <div class="sign-cell center">Checked By</div>
+      <div class="sign-cell right">
+        Signature<br />
+        <strong>For {{ d.company?.compName || 'DEMO' }}</strong>
+      </div>
+    </div>
+
+    <!-- GST TAX SUMMARY -->
+    <table class="gst-grid">
+      <thead>
+        <tr>
+          <th rowspan="2">SR.<br/>NO</th>
+          <th rowspan="2">HSN/SAC CODE</th>
+          <th colspan="2">CGST</th>
+          <th colspan="2">SGST</th>
+          <th colspan="2">IGST</th>
+          <th rowspan="2">CESS</th>
+          <th rowspan="2">TOTAL TAX</th>
+        </tr>
+        <tr>
+          <th>Rate %</th><th>Amount</th>
+          <th>Rate %</th><th>Amount</th>
+          <th>Rate %</th><th>Amount</th>
+        </tr>
+      </thead>
+      <!--
+        gstSummary is aggregated server-side from the line items, with the
+        intra/inter-state split already applied. We just render it.
+      -->
+      <tbody>
+        @for (g of d.gstSummary; track $index; let i = $index) {
+          <tr>
+            <td class="center">{{ i + 1 }}</td>
+            <td class="center">{{ g.hsncode ?? '' }}</td>
+            <td class="num">{{ (+(g.cgstRt ?? 0)).toFixed(2) }}</td>
+            <td class="num">{{ fmt(g.cgstAmt) }}</td>
+            <td class="num">{{ (+(g.sgstRt ?? 0)).toFixed(2) }}</td>
+            <td class="num">{{ fmt(g.sgstAmt) }}</td>
+            <td class="num">{{ (+(g.igstRt ?? 0)).toFixed(2) }}</td>
+            <td class="num">{{ fmt(g.igstAmt) }}</td>
+            <td class="num">{{ fmt(g.cess) }}</td>
+            <td class="num">{{ fmt(g.totTax) }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="10" class="center" style="color:#94a3b8;font-style:italic;padding:8px;">
+              No line items to summarize
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

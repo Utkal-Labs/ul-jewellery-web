@@ -1,0 +1,442 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// SYSTEM
+// ============================================================
+
+model SetupInfo {
+  id           Int     @id @default(autoincrement()) @map("ID")
+  compName     String? @map("COMP_NAME") @db.VarChar(60)
+  address1     String? @map("ADDRESS1") @db.VarChar(60)
+  address2     String? @map("ADDRESS2") @db.VarChar(60)
+  address3     String? @map("ADDRESS3") @db.VarChar(60)
+  phone        String? @map("PHONE") @db.VarChar(20)
+  compPan      String? @map("COMP_PAN") @db.VarChar(15)
+  gstinno      String? @map("GSTINNO") @db.VarChar(16)
+  stateCode    String? @map("StateCode") @db.VarChar(3)
+  sendsms      Int?    @default(0) @map("SENDSMS")
+  smsUser      String? @map("SMS_USER") @db.VarChar(30)
+  smsPassword  String? @map("SMS_PASSWORD") @db.VarChar(30)
+  userNo       String? @map("UserNo") @db.VarChar(5)
+
+  // GL accounts for automated double-entry posting (column names match actual DB)
+  customerDueGl     Int?    @map("CUSTOMER_DUE")        // Step 3: outstanding when no dealer
+  tcsAcGl           Int?    @map("TCS_AC")               // Step 5: TCS
+  discountAllowedGl Int?    @map("DISCOUNT_ALLOWED")     // Step 6: discount
+  purchaseTaxGl     Int?    @map("PURCHASE_TAX")         // Step 7: purchase tax (pre-GST)
+  cgstGl            Int?    @map("CGST")                 // Step 8: CGST fallback
+  sgstGl            Int?    @map("SGST")                 // Step 8: SGST fallback
+  igstGl            Int?    @map("IGST")                 // Step 8: IGST fallback
+  roundOffGl        Int?    @map("RNDACC")               // Step 10: round-off
+
+  @@map("SETUP_INFO")
+}
+
+model User {
+  id           Int     @id @default(autoincrement()) @map("ID")
+  username     String  @unique @map("USERNAME") @db.VarChar(30)
+  passwordHash String  @map("PASSWORD_HASH") @db.VarChar(200)
+  role         Int?    @default(0) @map("ROLE")
+  locid        String? @map("LOCID") @db.VarChar(2)
+  active       Int?    @default(1) @map("ACTIVE")
+  createdAt    DateTime? @default(now()) @map("CREATED_AT")
+
+  @@map("USERS")
+}
+
+model SerialInfo {
+  trancode        String @id @map("TRANCODE") @db.VarChar(3)
+  printStatus     Int?   @default(0) @map("PRINT_STATUS")
+  tsave           Int?   @default(1) @map("TSAVE")
+  passwordActive  Int?   @default(0) @map("PasswordActive")
+  prefix          String? @map("PREFIX") @db.VarChar(5)
+  currentno       Int?   @default(0) @map("CURRENTNO")
+
+  @@map("SERIAL_INFO")
+}
+
+model IdHeader {
+  trancode    String @id @map("TRANCODE") @db.VarChar(3)
+  prefix      String? @map("PREFIX") @db.VarChar(5)
+  currentno   Int?   @default(0) @map("CURRENTNO")
+  suffix      String? @map("SUFFIX") @db.VarChar(5)
+  workvou     String? @map("WORKVOU") @db.VarChar(10)
+  description String? @map("DESCRIPTION") @db.VarChar(50)
+
+  @@map("ID_HEADER")
+}
+
+// ============================================================
+// ACCOUNT HIERARCHY
+// ============================================================
+
+model AccountGroup {
+  accGroup   Int     @id @map("ACC_GROUP")
+  accName    String? @map("ACC_NAME") @db.VarChar(25)
+  plbl       String? @map("PLBL") @db.VarChar(1)
+  opbal      Int?    @default(0) @map("OPBAL")
+  incExp     String? @map("INC_EXP") @db.VarChar(1)
+  groupHead  String? @map("GROUP_HEAD") @db.VarChar(5)
+  asLi       String? @map("AS_LI") @db.VarChar(1)
+  delAl      String? @map("DEL_AL") @db.VarChar(1)
+  bal        String? @map("BAL") @db.VarChar(1)
+  side       String? @map("SIDE") @db.VarChar(1)
+  printno    String? @map("PRINTNO") @db.VarChar(1)
+  mergeData  String? @map("MergeData") @db.VarChar(1)
+
+  accounts   AccountMaster[]
+
+  @@map("ACCOUNT_GROUP")
+}
+
+model AccountMaster {
+  glCode      Int      @id @map("GL_CODE")
+  accName     String?  @map("ACC_NAME") @db.VarChar(44)
+  accGroup    Int?     @map("ACC_GROUP")
+  opening     Int?     @default(0) @map("OPENING")
+  lastYearBal Int?     @default(0) @map("LAST_YEAR_BAL")
+  currentBal  Decimal? @default(0) @map("CURRENT_BAL") @db.Decimal(12, 2)
+  tempBal     Decimal? @default(0) @map("TEMP_BAL") @db.Decimal(12, 2)
+  upAllowed   String?  @map("UP_ALLOWED") @db.VarChar(1)
+  formerName  String?  @map("FORMER_NAME") @db.VarChar(44)
+  address1    String?  @map("ADDRESS1") @db.VarChar(50)
+  address2    String?  @map("ADDRESS2") @db.VarChar(50)
+  address3    String?  @map("ADDRESS3") @db.VarChar(50)
+  locid       String?  @map("LOCID") @db.VarChar(2)
+  nullfydata  String?  @db.VarChar(1)
+  aType       String?  @map("A_Type") @db.VarChar(1)
+  accCode     String?  @map("ACC_CODE") @db.VarChar(10)
+  creditLimit String?  @map("Credit_Limit") @db.VarChar(15)
+
+  group                AccountGroup?          @relation(fields: [accGroup], references: [accGroup])
+  transactions         AccountTrans[]
+  addressBook          Addressbook[]
+  dealers              DealerMaster[]
+  customerPayments     CustomerPaidAmount[]
+
+  @@map("ACCOUNT_MASTER")
+}
+
+model AccountTrans {
+  trancode    String   @map("TRANCODE") @db.VarChar(3)
+  vounum      String   @map("VOUNUM") @db.VarChar(10)
+  vousrl      String   @map("VOUSRL") @db.VarChar(3)
+  voudate     String?  @map("VOUDATE") @db.VarChar(19)
+  glCode      Int?     @map("GL_CODE")
+  amount      Decimal? @map("AMOUNT") @db.Decimal(23, 15)
+  bankdate    String?  @map("BANKDATE") @db.VarChar(10)
+  cbank1      String?  @db.VarChar(1)
+  locid       String?  @map("LOCID") @db.VarChar(2)
+  nullfydata  String?  @db.VarChar(1)
+  ornLocation String?  @map("ORN_LOCATION") @db.VarChar(2)
+  linkvou     String?  @map("LINKVOU") @db.VarChar(10)
+  linktc      String?  @map("LINKTC") @db.VarChar(3)
+  deptCode    String?  @map("DeptCode") @db.VarChar(5)
+  cr          String?  @map("CR") @db.VarChar(1)
+  dr          String?  @map("DR") @db.VarChar(1)
+  transfer    String?  @map("Transfer") @db.VarChar(1)
+
+  account     AccountMaster? @relation(fields: [glCode], references: [glCode])
+
+  @@id([trancode, vounum, vousrl])
+  @@map("ACCOUNT_TRANS")
+}
+
+// ============================================================
+// MASTERS
+// ============================================================
+
+model DealerMaster {
+  code          String   @id @map("CODE") @db.VarChar(4)
+  name          String?  @map("NAME") @db.VarChar(50)
+  address1      String?  @map("ADDRESS1") @db.VarChar(50)
+  address2      String?  @map("ADDRESS2") @db.VarChar(50)
+  address3      String?  @map("ADDRESS3") @db.VarChar(50)
+  phone         String?  @map("PHONE") @db.VarChar(15)
+  contactPerson String?  @map("CONTACTPERSON") @db.VarChar(30)
+  glCode        Int?     @map("GL_CODE")
+  unregistered  Int?     @default(0) @map("UNREGISTERED")
+  city          String?  @db.VarChar(30)
+  state         String?  @map("State") @db.VarChar(30)
+  idState       Int?     @map("ID_STATE")
+  gstin         String?  @map("GSTIN") @db.VarChar(16)
+  tcsAmt        Decimal? @default(0) @map("Tcs_Amt") @db.Decimal(12, 2)
+  tcsApply      Int?     @default(0) @map("TcsApply")
+  mobilleNo     String?  @map("MobilleNo") @db.VarChar(15)
+
+  account       AccountMaster?   @relation(fields: [glCode], references: [glCode])
+  purchases     StonePurchase[]
+
+  @@map("DEALER_MASTER")
+}
+
+model SalesmanMaster {
+  code        String  @id @map("CODE") @db.VarChar(4)
+  name        String? @map("NAME") @db.VarChar(30)
+  address1    String? @map("ADDRESS1") @db.VarChar(50)
+  glCode      Int?    @map("GL_CODE")
+  locid       String? @map("LOCID") @db.VarChar(2)
+  trgAmt      Decimal? @default(0) @map("TrgAmt") @db.Decimal(12, 2)
+
+  purchases   StonePurchase[]
+
+  @@map("SALESMAN_MASTER")
+}
+
+model Addressbook {
+  clientSerial  Int      @id @default(autoincrement()) @map("CLIENTSERIAL")
+  fname         String?  @map("FNAME") @db.VarChar(5)
+  name          String?  @map("NAME") @db.VarChar(50)
+  address1      String?  @map("ADDRESS1") @db.VarChar(50)
+  address2      String?  @map("ADDRESS2") @db.VarChar(50)
+  address3      String?  @map("ADDRESS3") @db.VarChar(50)
+  city          String?  @map("CITY") @db.VarChar(30)
+  state         String?  @map("STATE") @db.VarChar(30)
+  phone         String?  @map("PHONE") @db.VarChar(15)
+  mobile        String?  @db.VarChar(15)
+  birthday      String?  @map("BIRTHDAY") @db.VarChar(19)
+  glCode        Int?     @map("GL_CODE")
+  idGroup       String?  @map("ID_GROUP") @db.VarChar(2)
+  locid         String?  @map("LOCID") @db.VarChar(2)
+  gstIn         String?  @map("GstIn") @db.VarChar(16)
+  panno         String?  @map("PANNO") @db.VarChar(12)
+  tcsAmt        Decimal? @default(0) @map("Tcs_Amt") @db.Decimal(12, 2)
+  tcsApply      Int?     @default(0) @map("TcsApply")
+
+  account       AccountMaster? @relation(fields: [glCode], references: [glCode])
+
+  @@map("ADDRESSBOOK")
+}
+
+// ============================================================
+// STONE MASTERS
+// ============================================================
+
+model StoneMaster {
+  stoneCode   String  @map("STONE_CODE") @db.VarChar(2)
+  stoneSub    String  @map("STONE_SUB") @db.VarChar(3)
+  description String? @map("DESCRIPTION") @db.VarChar(50)
+  uom         String? @map("UOM") @db.VarChar(5)
+  hsnCode     Int?    @map("HSN_CODE")
+  active      Int?    @default(1) @map("ACTIVE")
+  stonePurc   Int?    @map("STONE_PURC")   // GL account for stone purchase debit (Step 4)
+  stoneSale   Int?    @map("STONE_SALE")   // GL account for stone sale debit (Step 4 / ITS)
+
+  gstDetails  GstStoneMasterDetl[]
+
+  @@id([stoneCode, stoneSub])
+  @@map("STONE_MASTER")
+}
+
+model GstStoneMasterDetl {
+  stoneCode  String   @map("STONECODE") @db.VarChar(2)
+  subCode    String   @map("SUBCODE") @db.VarChar(3)
+  srl        Int      @map("SRL")
+  fromdt     String?  @map("FROMDT") @db.VarChar(19)
+  todt       String?  @map("TODT") @db.VarChar(19)
+  hsncode    Int?     @map("HSNCODE")
+  sgst       Decimal? @map("SGST") @db.Decimal(5, 3)
+  cgst       Decimal? @map("CGST") @db.Decimal(5, 3)
+  igst       Decimal? @map("IGST") @db.Decimal(5, 2)
+  isActive   Int?     @default(1) @map("ISACTIVE")
+  cgstac     Int?     @map("CGSTAC")    // GL account for CGST posting (HSN-wise, Step 10)
+  sgstac     Int?     @map("SGSTAC")    // GL account for SGST posting (HSN-wise, Step 10)
+  igstac     Int?     @map("IGSTAC")    // GL account for IGST posting (HSN-wise, Step 10)
+
+  stone      StoneMaster @relation(fields: [stoneCode, subCode], references: [stoneCode, stoneSub])
+
+  @@id([stoneCode, subCode, srl])
+  @@map("GST_STONE_MASTER_DETL")
+}
+
+model GstCodeMaster {
+  id          Int      @id @map("ID")
+  code        String?  @map("CODE") @db.VarChar(3)
+  taxcode     String?  @map("TAXCODE") @db.VarChar(10)
+  sgst        Decimal? @map("SGST") @db.Decimal(5, 3)
+  cgst        Decimal? @map("CGST") @db.Decimal(5, 3)
+  igst        Decimal? @map("IGST") @db.Decimal(5, 2)
+  utgst       Int?     @default(0) @map("UTGST")
+  description String?  @map("Description") @db.VarChar(150)
+
+  @@map("GST_CODE_MASTER")
+}
+
+model GstStateMaster {
+  id        Int     @id @map("ID")
+  stateName String? @map("STATE_NAME") @db.VarChar(50)
+  stateCode String? @map("STATE_CODE") @db.VarChar(3)
+  country   String? @map("COUNTRY") @db.VarChar(30)
+
+  @@map("GST_STATE_MASTER")
+}
+
+model PacketMaster {
+  code        String  @id @map("CODE") @db.VarChar(10)
+  description String? @map("DESCRIPTION") @db.VarChar(50)
+  stoneCode   String? @map("STONE_CODE") @db.VarChar(2)
+  stoneSub    String? @map("STONE_SUB") @db.VarChar(3)
+  active      Int?    @default(1) @map("ACTIVE")
+
+  openings    PacketMasterOpening[]
+
+  @@map("PACKET_MASTER")
+}
+
+model PacketMasterOpening {
+  code      String   @map("CODE") @db.VarChar(10)
+  stoneCode String   @map("STONE_CODE") @db.VarChar(2)
+  stoneSub  String   @map("STONE_SUB") @db.VarChar(3)
+  costrate  Decimal? @default(0) @map("COSTRATE") @db.Decimal(12, 2)
+
+  packet    PacketMaster @relation(fields: [code], references: [code])
+
+  @@id([code, stoneCode, stoneSub])
+  @@map("PACKET_MASTER_OPENING")
+}
+
+// ============================================================
+// STONE PURCHASE TRANSACTION
+// ============================================================
+
+model StonePurchase {
+  trancode       String   @default("RTP") @map("TRANCODE") @db.VarChar(3)
+  vounum         String   @map("VOUNUM") @db.VarChar(10)
+  voudate        DateTime? @map("VOUDATE")
+  dealerCode     String?   @map("DEALER_CODE") @db.VarChar(4)
+  refBillNo      String?   @map("REF_BILL_NO") @db.VarChar(15)
+  refBillDate    DateTime? @map("REF_BILL_DATE")
+  salesmanCode   String?  @map("SALESMAN_CODE") @db.VarChar(4)
+  isCustomer     Int?     @default(0) @map("IS_CUSTOMER")
+  totalAmount    Decimal? @default(0) @map("TOTAL_AMOUNT") @db.Decimal(12, 2)
+  discPer        Decimal? @default(0) @map("DISC_PER") @db.Decimal(5, 2)
+  discAmt        Decimal? @default(0) @map("DISC_AMT") @db.Decimal(12, 2)
+  taxAmt         Decimal? @default(0) @map("TAX_AMT") @db.Decimal(12, 2)
+  vatPer         Decimal? @default(0) @map("VAT_PER") @db.Decimal(5, 2)
+  vatAmt         Decimal? @default(0) @map("VAT_AMT") @db.Decimal(12, 2)
+  tcsTaxableAmt  Decimal? @default(0) @map("TCS_TAXABLE_AMT") @db.Decimal(12, 2)
+  tcsPer         Decimal? @default(1) @map("TCS_PER") @db.Decimal(5, 2)
+  tcsAmt         Decimal? @default(0) @map("TCS_AMT") @db.Decimal(12, 2)
+  roundOff       Decimal? @default(0) @map("ROUND_OFF") @db.Decimal(8, 2)
+  grandTotal     Decimal? @default(0) @map("GRAND_TOTAL") @db.Decimal(12, 2)
+  narration      String?  @map("NARRATION") @db.VarChar(200)
+  panNo          String?  @map("PAN_NO") @db.VarChar(12)
+  cancel         Int?     @default(0) @map("CANCEL")
+  locid          String?  @map("LOCID") @db.VarChar(2)
+  timeofsave     String?  @map("TIMEOFSAVE") @db.VarChar(19)
+
+  dealer         DealerMaster?    @relation(fields: [dealerCode], references: [code])
+  salesman       SalesmanMaster?  @relation(fields: [salesmanCode], references: [code])
+  stoneLines     StoneTrans[]
+  payments       CustomerPaidAmount[]
+  gstSummary     GstTaxSummaryDetail[]
+
+  @@id([trancode, vounum])
+  @@map("STONE_PURCHASE")
+}
+
+model StoneTrans {
+  trancode    String   @map("TRANCODE") @db.VarChar(3)
+  vounum      String   @map("VOUNUM") @db.VarChar(10)
+  srl         Int      @map("SRL")
+  stoneCode   String?  @map("STONE_CODE") @db.VarChar(2)
+  stoneSub    String?  @map("STONE_SUB") @db.VarChar(3)
+  description String?  @map("DESCRIPTION") @db.VarChar(50)
+  uom         String?  @map("UOM") @db.VarChar(5)
+  pcs         Int?     @default(0) @map("PCS")
+  weight      Decimal? @default(0) @map("WEIGHT") @db.Decimal(12, 3)
+  rate        Decimal? @default(0) @map("RATE") @db.Decimal(12, 2)
+  amount      Decimal? @default(0) @map("AMOUNT") @db.Decimal(12, 2)
+  packetNo    String?  @map("PACKET_NO") @db.VarChar(10)
+  taxAmt      Decimal? @default(0) @map("TAX_AMT") @db.Decimal(12, 2)
+  hsncode     Int?     @map("HSNCODE")
+  cgst        Decimal? @default(0) @map("CGST") @db.Decimal(5, 3)
+  sgst        Decimal? @default(0) @map("SGST") @db.Decimal(5, 3)
+  igst        Decimal? @default(0) @map("IGST") @db.Decimal(5, 2)
+
+  purchase    StonePurchase @relation(fields: [trancode, vounum], references: [trancode, vounum])
+
+  @@id([trancode, vounum, srl])
+  @@map("STONE_TRANS")
+}
+
+model CustomerPaidAmount {
+  trancode  String   @map("TRANCODE") @db.VarChar(3)
+  vounum    String   @map("VOUNUM") @db.VarChar(10)
+  srl       Int      @map("SRL")
+  glCode    Int?     @map("GL_CODE")
+  chno      String?  @map("CHNO") @db.VarChar(20)
+  chdate    String?  @map("CHDATE") @db.VarChar(19)
+  amount    Decimal? @default(0) @map("AMOUNT") @db.Decimal(12, 2)
+
+  purchase  StonePurchase  @relation(fields: [trancode, vounum], references: [trancode, vounum])
+  account   AccountMaster? @relation(fields: [glCode], references: [glCode])
+
+  @@id([trancode, vounum, srl])
+  @@map("CUSTOMER_PAID_AMOUNT")
+}
+
+model GstTaxSummaryDetail {
+  trancode  String   @map("TRANCODE") @db.VarChar(3)
+  vounum    String   @map("VOUNUM") @db.VarChar(10)
+  srl       Int      @map("SRL")
+  hsncode   Int?     @map("HSNCODE")
+  cgstRt    Decimal? @default(0) @map("CGST_RT") @db.Decimal(5, 3)
+  cgstAmt   Decimal? @default(0) @map("CGST_AMT") @db.Decimal(12, 2)
+  sgstRt    Decimal? @default(0) @map("SGST_RT") @db.Decimal(5, 3)
+  sgstAmt   Decimal? @default(0) @map("SGST_AMT") @db.Decimal(12, 2)
+  igstRt    Decimal? @default(0) @map("IGST_RT") @db.Decimal(5, 2)
+  igstAmt   Decimal? @default(0) @map("IGST_AMT") @db.Decimal(12, 2)
+  cess      Decimal? @default(0) @map("CESS") @db.Decimal(12, 2)
+  totTax    Decimal? @default(0) @map("TOT_TAX") @db.Decimal(12, 2)
+  txabamt   Decimal? @default(0) @map("TXABAMT") @db.Decimal(12, 2)
+
+  purchase  StonePurchase @relation(fields: [trancode, vounum], references: [trancode, vounum])
+
+  @@id([trancode, vounum, srl])
+  @@map("GST_TAXSUMMARY_DETAIL")
+}
+
+// ============================================================
+// AUDIT TRAIL
+// ============================================================
+
+model UserAdditionBy {
+  id           Int     @id @default(autoincrement()) @map("ID")
+  formCaption  String? @map("FormCaption") @db.VarChar(50)
+  addVou       String? @map("AddVou") @db.VarChar(10)
+  addDate      String? @map("AddDate") @db.VarChar(19)
+  addTime      String? @map("AddTime") @db.VarChar(10)
+  userName     String? @map("UserName") @db.VarChar(30)
+
+  @@map("USER_ADDITION_BY")
+}
+
+model UserModifiedBy {
+  id           Int     @id @default(autoincrement()) @map("ID")
+  formCaption  String? @map("FormCaption") @db.VarChar(50)
+  modVou       String? @map("ModVou") @db.VarChar(10)
+  modDate      String? @map("ModDate") @db.VarChar(19)
+  modTime      String? @map("ModTime") @db.VarChar(10)
+  userName     String? @map("UserName") @db.VarChar(30)
+
+  @@map("USER_MODIFIED_BY")
+}
+
+model UserDeletedBy {
+  id           Int     @id @default(autoincrement()) @map("ID")
+  formCaption  String? @map("FormCaption") @db.VarChar(50)
+  delVou       String? @map("DelVou") @db.VarChar(10)
+  delDate      String? @map("DelDate") @db.VarChar(19)
+  delTime      String? @map("DelTime") @db.VarChar(10)
+  userName     String? @map("UserName") @db.VarChar(30)
+
+  @@map("USER_DELETED_BY")
+}

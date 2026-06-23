@@ -1,0 +1,2 @@
+INSERT INTO "USERS" ("USERNAME", "PASSWORD_HASH", "ROLE", "ACTIVE")
+VALUES ('admin', '$2b$10$TMzdWPQFzkzqZfE1eKbFx.LB.37ttbnUPc2/x7xjFd7wGp1Gobhsu', 1, 1);

@@ -1,0 +1,154 @@
+:host { display: block; }
+
+// ── KPI strip ───────────────────────────────────────────────────────────────
+.kpi-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.kpi {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  .kpi-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .kpi-value {
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #0f172a;
+  }
+  &.accent {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    border-color: transparent;
+    .kpi-label { color: rgba(255,255,255,0.75); }
+    .kpi-value { color: #fff; }
+  }
+}
+
+// ── Results card ────────────────────────────────────────────────────────────
+.results {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+.results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 12.5px;
+  color: #475569;
+
+  strong { color: #0f172a; font-weight: 700; }
+  .hint  { color: #94a3b8; font-size: 11.5px; }
+  .link-btn {
+    background: none; border: none; padding: 0; margin-left: 2px;
+    color: #4f46e5; cursor: pointer; font: inherit; text-decoration: underline;
+    &:hover { color: #4338ca; }
+  }
+
+  .csv-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid #cbd5e1; background: #ffffff; color: #475569;
+    font: 600 11.5px 'Inter', system-ui, sans-serif;
+    padding: 4px 10px; border-radius: 5px; cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    &:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+  }
+}
+
+.state {
+  padding: 48px 24px;
+  text-align: center;
+  color: #94a3b8;
+
+  mat-icon { font-size: 44px; width: 44px; height: 44px; color: #cbd5e1; }
+  h3 { font-size: 14px; font-weight: 700; color: #475569; margin: 10px 0 4px; }
+  p  { font-size: 12.5px; margin: 0; max-width: 360px; margin: 0 auto; }
+
+  .spin { animation: spin 1.2s linear infinite; color: #6366f1; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ── Table ───────────────────────────────────────────────────────────────────
+.table-wrap { overflow: auto; max-height: calc(100vh - 320px); }
+
+.result-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+
+  th, td {
+    text-align: left;
+    padding: 7px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+  }
+  th {
+    background: #f8fafc;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    user-select: none;
+  }
+  th.sortable { cursor: pointer; transition: background 0.1s, color 0.1s; }
+  th.sortable:hover { background: #eef2ff; color: #4338ca; }
+  th.sorted { background: #eef2ff; color: #4338ca; }
+  th .th-label {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  th.num .th-label { justify-content: flex-end; }
+  th .sort-ic {
+    font-size: 14px; width: 14px; height: 14px; line-height: 14px;
+    color: #6366f1;
+    &.faded { color: #cbd5e1; opacity: 0; transition: opacity 0.1s; }
+  }
+  th.sortable:hover .sort-ic.faded { opacity: 1; }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.center, td.center { text-align: center; }
+  td.bold { font-weight: 600; color: #0f172a; }
+  td.ellipsis {
+    max-width: 220px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: #64748b;
+  }
+
+  tbody tr.clickable { cursor: pointer; transition: background 0.1s; }
+  tbody tr.clickable:hover { background: #f8fafc; }
+
+  .action-col, .row-action { width: 28px; text-align: center; }
+  .row-action mat-icon { font-size: 16px; width: 16px; height: 16px; color: #94a3b8; }
+
+  tfoot td {
+    background: #f8fafc;
+    border-top: 2px solid #cbd5e1;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-weight: 600;
+    color: #1e293b;
+    &.strong { color: #4f46e5; font-weight: 700; }
+  }
+}

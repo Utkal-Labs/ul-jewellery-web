@@ -1,0 +1,68 @@
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+$theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$blue-palette,
+  ),
+  typography: (
+    brand-family: 'Inter, system-ui, sans-serif',
+    plain-family: 'Inter, system-ui, sans-serif',
+  ),
+  density: (scale: -3)
+));
+
+html {
+  @include mat.all-component-themes($theme);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  background: #f1f5f9;
+  color: #1e293b;
+  overflow: hidden;
+}
+
+/* Thin modern scrollbars */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Focus outline consistent across all interactive elements */
+:focus-visible { outline: 2px solid #4f46e5; outline-offset: 1px; }
+
+@media print {
+  app-crud-toolbar { display: none; }
+}
+
+/* ── Snack bar variants ───────────────────────────────────────────── */
+.snack-error {
+  .mdc-snackbar__surface {
+    background: #dc2626 !important;
+  }
+  .mdc-snackbar__label,
+  .mat-mdc-snack-bar-action { color: #fff !important; }
+}
+
+.snack-success {
+  .mdc-snackbar__surface {
+    background: #16a34a !important;
+  }
+  .mdc-snackbar__label,
+  .mat-mdc-snack-bar-action { color: #fff !important; }
+}
+
+.snack-warn {
+  .mdc-snackbar__surface {
+    background: #d97706 !important;
+  }
+  .mdc-snackbar__label,
+  .mat-mdc-snack-bar-action { color: #fff !important; }
+}

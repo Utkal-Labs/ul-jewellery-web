@@ -1,0 +1,510 @@
+<app-crud-toolbar
+  [mode]="mode()"
+  [saving]="saving()"
+  (new)="onNew()"       (modify)="onModify()"   (delete)="onDelete()"
+  (top)="onTop()"       (prior)="onPrior()"     (next)="onNext()"     (last)="onLast()"
+  (seek)="onSeek()"
+  (save)="onSave()"     (discard)="onDiscard()"
+  (print)="onPrint()"   (close)="onClose()"     (cancel)="onCancel()"
+/>
+
+<datalist id="packet-no-dl">
+  @for (p of packetMasterList(); track p.code) {
+    <option [value]="p.code">{{ p.description }}</option>
+  }
+</datalist>
+
+<div class="sp-page">
+
+  <!-- Page header -->
+  <div class="sp-header">
+    <div class="sp-title">Stone Purchase</div>
+    <div class="sp-vounum">{{ form.get('VOUNUM')?.value || '—' }}</div>
+    @if (isCancelled()) {
+      <span class="cancelled-badge">CANCELLED</span>
+    }
+    @if (mode() === 'view' && currentVounum() && !isCancelled()) {
+      <button class="journal-btn" (click)="toggleJournal()">
+        {{ showJournal() ? 'Hide Entries' : 'View DB Entries' }}
+      </button>
+    }
+  </div>
+
+  <form [formGroup]="form" autocomplete="off">
+
+    <!-- ── Section 1: Header + Dealer Info ───────────────────────── -->
+    <div class="card">
+      <div class="card-grid-2">
+
+        <!-- LEFT: Core header fields -->
+        <div class="field-group">
+          <div class="section-label">Voucher Details</div>
+
+          <div class="field-row">
+            <label class="fl">Voucher No.</label>
+            <input id="f-vounum" class="fi fi-sm" formControlName="VOUNUM" />
+          </div>
+          <div class="field-row">
+            <label class="fl">Voucher Date</label>
+            <input class="fi fi-date" type="date" formControlName="VOUDATE" />
+            @if (isToday('VOUDATE')) { <span class="date-chip">today</span> }
+          </div>
+          <div class="field-row lookup-wrap">
+            <label class="fl">Dealer Code</label>
+            <input class="fi fi-sm" formControlName="DEALER_CODE"
+                   (focus)="onDealerFocus()"
+                   (input)="onDealerInput($any($event.target).value)"
+                   (keydown)="onDealerKeydown($event)"
+                   (blur)="onDealerBlur()"
+                   style="text-transform:uppercase" />
+            @if (showDealerDrop() && dealerDropdown().length) {
+              <div id="dealer-drop" class="lookup-drop">
+                @for (d of dealerDropdown(); track d.code; let i = $index) {
+                  <div class="lookup-item" [class.lk-active]="dealerActiveIdx() === i"
+                       (mousedown)="selectDealer(d)">
+                    <span class="lk-code">{{ d.code }}</span> {{ d.name }}
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          <div class="field-row">
+            <label class="fl">Ref. Bill No</label>
+            <input id="f-refbillno" class="fi fi-sm" formControlName="REF_BILL_NO" />
+          </div>
+          <div class="field-row">
+            <label class="fl">Ref. Bill Date</label>
+            <input class="fi fi-date" type="date" formControlName="REF_BILL_DATE" />
+            @if (isToday('REF_BILL_DATE')) { <span class="date-chip">today</span> }
+          </div>
+          <div class="field-row lookup-wrap">
+            <label class="fl">Salesman Code</label>
+            <input class="fi fi-sm" formControlName="SALESMAN_CODE"
+                   (focus)="onSalesmanFocus()"
+                   (input)="onSalesmanInput($any($event.target).value)"
+                   (keydown)="onSalesmanKeydown($event)"
+                   (blur)="onSalesmanBlur()"
+                   style="text-transform:uppercase" />
+            @if (showSalesmanDrop() && salesmanDropdown().length) {
+              <div id="salesman-drop" class="lookup-drop">
+                @for (s of salesmanDropdown(); track s.code; let i = $index) {
+                  <div class="lookup-item" [class.lk-active]="salesmanActiveIdx() === i"
+                       (mousedown)="selectSalesman(s)">
+                    <span class="lk-code">{{ s.code }}</span> {{ s.name }}
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- RIGHT: Dealer info panel -->
+        <div class="info-panel">
+          <div class="section-label">Dealer Info</div>
+
+          <div class="info-row">
+            <span class="info-key">Name</span>
+            <input class="fi info-val" formControlName="DEALER_NAME" readonly tabindex="-1" />
+          </div>
+          <div class="info-row addr-row">
+            <span class="info-key">Address</span>
+            <div class="addr-stack">
+              <input class="fi" formControlName="DEALER_ADDR1" readonly tabindex="-1" />
+              <input class="fi" formControlName="DEALER_ADDR2" readonly tabindex="-1" />
+            </div>
+          </div>
+          <div class="info-row">
+            <span class="info-key">PAN</span>
+            <input class="fi info-val" formControlName="PAN_NO" />
+          </div>
+          <div class="info-footer">
+            <div class="info-row" style="flex:1">
+              <span class="info-key">Salesman</span>
+              <span class="salesman-badge">
+                {{ form.get('SALESMAN_CODE')?.value }}
+                @if (salesmanName()) { — {{ salesmanName() }} }
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">State</span>
+              <input class="fi fi-state" formControlName="DEALER_STATE" readonly tabindex="-1" />
+            </div>
+            <label class="toggle-customer">
+              <input id="f-iscustomer" type="checkbox" formControlName="IS_CUSTOMER" />
+              <span>Customer</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Section 2: Stone Lines ─────────────────────────────────── -->
+    <div class="card">
+      <div class="section-label">Stone Lines</div>
+      <div class="grid-wrap">
+        <table class="data-grid">
+          <colgroup>
+            <col style="width:70px">
+            <col style="width:70px">
+            <col style="width:130px">
+            <col style="width:44px">
+            <col style="width:44px">
+            <col style="width:68px">
+            <col style="width:68px">
+            <col style="width:48px">
+            <col style="width:80px">
+            <col style="width:80px">
+            <col style="width:60px">
+            <col style="width:68px">
+            <col style="width:52px">
+            <col style="width:52px">
+            <col style="width:52px">
+            @if (mode() !== 'view') { <col style="width:28px"> }
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Stone</th>
+              <th>Sub</th>
+              <th>Description</th>
+              <th>UOM</th>
+              <th class="r">Pcs</th>
+              <th class="r">Weight</th>
+              <th class="r">Rate</th>
+              <th>Type</th>
+              <th class="r">Amount</th>
+              <th>Packet No</th>
+              <th class="r">TaxAmt</th>
+              <th class="r">HSN</th>
+              <th class="r">CGST%</th>
+              <th class="r">SGST%</th>
+              <th class="r">IGST%</th>
+              @if (mode() !== 'view') { <th></th> }
+            </tr>
+          </thead>
+          <tbody formArrayName="stoneLines">
+            @for (ctrl of stoneLines.controls; track ctrl; let i = $index) {
+              <tr [formGroupName]="i" class="grid-row">
+                <td>
+                  <select class="ci" formControlName="STONE_CODE"
+                          (change)="onStoneCodeChange(i, $any($event.target).value)">
+                    <option value=""></option>
+                    @for (sc of stoneCodes(); track sc) {
+                      <option [value]="sc">{{ sc }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <select class="ci" formControlName="STONE_SUB"
+                          (change)="onSubCodeChange(i)">
+                    <option value=""></option>
+                    @for (sc of (subCodesMap()[getStoneCodeAt(i)] ?? []); track sc) {
+                      <option [value]="sc">{{ sc }}</option>
+                    }
+                  </select>
+                </td>
+                <td><input class="ci wide" formControlName="DESCRIPTION" tabindex="-1" /></td>
+                <td><input class="ci narrow" formControlName="UOM" tabindex="-1" /></td>
+                <td><input class="ci r" type="number" min="0" formControlName="PCS"
+                           (input)="calcLineAmount(i)" /></td>
+                <td><input class="ci r" type="number" min="0" step="0.001" formControlName="WEIGHT"
+                           (input)="calcLineAmount(i)" /></td>
+                <td><input class="ci r" type="number" min="0" step="0.01" formControlName="RATE"
+                           (input)="calcLineAmount(i)" /></td>
+                <td>
+                  <select class="ci" formControlName="RATE_TYPE" (change)="calcLineAmount(i)">
+                    <option value="Wt">Wt</option>
+                    <option value="Pcs">Pcs</option>
+                  </select>
+                </td>
+                <td><input class="ci r" type="number" formControlName="AMOUNT" readonly tabindex="-1" /></td>
+                <td><input class="ci" formControlName="PACKET_NO" list="packet-no-dl" /></td>
+                <td><input class="ci r" type="number" formControlName="TAX_AMT" readonly tabindex="-1" /></td>
+                <td><input class="ci r" formControlName="HSNCODE" /></td>
+                <td><input class="ci r" type="number" step="0.001" formControlName="CGST"
+                           (change)="calcLineTax(i)" /></td>
+                <td><input class="ci r" type="number" step="0.001" formControlName="SGST"
+                           (change)="calcLineTax(i)" /></td>
+                <td><input class="ci r" type="number" step="0.001" formControlName="IGST"
+                           (change)="calcLineTax(i)" /></td>
+                @if (mode() !== 'view') {
+                  <td class="del-td">
+                    <button type="button" class="del-btn" tabindex="-1" (click)="removeStoneLine(i)" title="Remove row">✕</button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+          @if (mode() !== 'view') {
+            <tfoot>
+              <tr><td colspan="16">
+                <button type="button" class="add-row-btn" (click)="addStoneLine()">+ Add Row</button>
+              </td></tr>
+            </tfoot>
+          }
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Section 3: Payments + Totals ──────────────────────────── -->
+    <div class="card bottom-card">
+
+      <!-- LEFT: Payments -->
+      <div class="payment-col">
+        <div class="section-label">Amount Paid By</div>
+        <div class="grid-wrap pay-grid-wrap">
+          <table class="data-grid">
+            <colgroup>
+              <col style="width:160px">
+              <col style="width:100px">
+              <col style="width:90px">
+              <col style="width:80px">
+              @if (mode() !== 'view') { <col style="width:28px"> }
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Ch./Card No.</th>
+                <th>Ch. Date</th>
+                <th class="r">Amount</th>
+                @if (mode() !== 'view') { <th></th> }
+              </tr>
+            </thead>
+            <tbody formArrayName="payments">
+              @for (ctrl of payments.controls; track ctrl; let i = $index) {
+                <tr [formGroupName]="i" class="grid-row">
+                  <td>
+                    <select class="ci" formControlName="ACC_NAME" (change)="onPayAccountSelect(i)">
+                      <option value=""></option>
+                      @for (a of paymentAccounts(); track a.glCode) {
+                        <option [value]="a.accName">{{ a.accName }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td><input class="ci" formControlName="CHNO"
+                             [class.ci-disabled]="payRowIsCash(i)" /></td>
+                  <td><input class="ci" type="date" formControlName="CHDATE"
+                             [class.ci-disabled]="payRowIsCash(i)" /></td>
+                  <td><input class="ci r" type="number" step="0.01" formControlName="AMOUNT" /></td>
+                  @if (mode() !== 'view') {
+                    <td class="del-td">
+                      <button type="button" class="del-btn" tabindex="-1" (click)="removePaymentLine(i)" title="Remove">✕</button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              @if (mode() !== 'view') {
+                <tr><td colspan="5">
+                  <button type="button" class="add-row-btn" (click)="addPaymentLine()">+ Add Row</button>
+                </td></tr>
+              }
+              <tr class="pay-totals-row">
+                <td colspan="2" class="pay-totals-label">Total Paid</td>
+                <td class="r pay-totals-amt">{{ TOTAL_PAID | number:'1.2-2' }}</td>
+                <td colspan="2"></td>
+              </tr>
+              <tr class="pay-totals-row"
+                  [class.balance-over]="BALANCE_DUE < -0.005"
+                  [class.balance-full]="BALANCE_DUE >= -0.005 && BALANCE_DUE <= 0.005"
+                  [class.balance-part]="BALANCE_DUE > 0.005">
+                <td colspan="2" class="pay-totals-label">Balance Due</td>
+                <td class="r pay-totals-amt">{{ BALANCE_DUE | number:'1.2-2' }}</td>
+                <td colspan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- RIGHT: Totals -->
+      <div class="totals-col">
+        <div class="section-label">Summary</div>
+
+        <div class="totals-body">
+          <div class="total-row">
+            <label>Total Amount</label>
+            <input class="ti" [value]="TOTAL_AMOUNT | number:'1.2-2'" readonly tabindex="-1" />
+          </div>
+          <div class="total-row">
+            <label>Discount</label>
+            <div class="ti-compound">
+              <input class="ti ti-pct" type="number" step="0.01" formControlName="DISC_PER" />
+              <span class="ti-sym">%</span>
+              <input class="ti" [value]="DISC_AMT | number:'1.2-2'" readonly tabindex="-1" />
+            </div>
+          </div>
+          <div class="total-row">
+            <label>
+              Tax Amt
+              <input type="checkbox" class="manual-chk" title="Manual entry"
+                     [checked]="manualTax()"
+                     [disabled]="mode() === 'view'"
+                     (change)="onManualTaxToggle($any($event.target).checked)" />
+            </label>
+            @if (manualTax()) {
+              <input class="ti ti-highlight" type="number" step="0.01" formControlName="TAX_AMT" />
+            } @else {
+              <input class="ti ti-highlight" [value]="TAX_AMT_COMPUTED | number:'1.2-2'" readonly tabindex="-1" />
+            }
+          </div>
+          <div class="total-row">
+            <label>TCS Taxable</label>
+            <input class="ti" [value]="TCS_TAXABLE_AMT | number:'1.2-2'" readonly tabindex="-1" />
+          </div>
+          <div class="total-row">
+            <label>TCS</label>
+            <div class="ti-compound">
+              <input class="ti ti-pct" type="number" step="0.01" formControlName="TCS_PER" />
+              <span class="ti-sym">%</span>
+              <input class="ti" [value]="TCS_AMT | number:'1.2-2'" readonly tabindex="-1" />
+            </div>
+          </div>
+          <div class="total-row">
+            <label>
+              Round Off
+              <input type="checkbox" class="manual-chk" tabindex="-1"
+                     [checked]="roundOffAdd()"
+                     [disabled]="mode() === 'view'"
+                     (change)="roundOffAdd.set($any($event.target).checked)" />
+            </label>
+            <input class="ti" type="number" step="0.01" min="0" formControlName="ROUND_OFF" />
+          </div>
+          <div class="total-row grand-row">
+            <label>Grand Total</label>
+            <input class="ti ti-grand" [value]="GRAND_TOTAL | number:'1.2-2'" readonly tabindex="-1" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Narration — spans full bottom width -->
+      <div class="narration-row">
+        <label class="fl">Narration</label>
+        <textarea class="fi narration-box" formControlName="NARRATION" rows="2"></textarea>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- ── Journal / DB Entry Inspector ──────────────────────────── -->
+  @if (showJournal()) {
+    <div class="journal-panel">
+
+      @if (journalLoading()) {
+        <div class="journal-loading">Fetching DB entries…</div>
+      }
+
+      @if (!journalLoading() && journalData()) {
+
+        <!-- Balance indicator -->
+        <div class="journal-balance" [class.balanced]="journalData().balanced"
+             [class.imbalanced]="!journalData().balanced">
+          <span class="jb-label">Double-entry balance</span>
+          <span class="jb-value">{{ journalData().balance | number:'1.6-6' }}</span>
+          <span class="jb-status">{{ journalData().balanced ? '✓ Balanced' : '⚠ IMBALANCED' }}</span>
+        </div>
+
+        <!-- Account entries -->
+        <div class="journal-section">
+          <div class="journal-section-title">
+            ACCOUNT_TRANS
+            <span class="jrow-count">{{ journalData().accountEntries.length }} rows</span>
+          </div>
+          <table class="journal-table">
+            <thead><tr>
+              <th>#</th><th>GL Code</th><th>Account Name</th><th class="r">Amount</th>
+            </tr></thead>
+            <tbody>
+              @for (e of journalData().accountEntries; track e.vousrl) {
+                <tr [class.jneg]="e.amount < 0" [class.jpos]="e.amount > 0">
+                  <td>{{ e.vousrl }}</td>
+                  <td>{{ e.glCode }}</td>
+                  <td>{{ e.accName ?? '—' }}</td>
+                  <td class="r">{{ e.amount | number:'1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Stone lines -->
+        <div class="journal-section">
+          <div class="journal-section-title">
+            STONE_TRANS
+            <span class="jrow-count">{{ journalData().stoneLines.length }} rows</span>
+          </div>
+          <table class="journal-table">
+            <thead><tr>
+              <th>#</th><th>Stone</th><th>Sub</th><th class="r">Wt</th>
+              <th class="r">Rate</th><th class="r">Amount</th><th class="r">Tax</th>
+              <th class="r">CGST%</th><th class="r">SGST%</th><th class="r">IGST%</th>
+            </tr></thead>
+            <tbody>
+              @for (l of journalData().stoneLines; track l.srl) {
+                <tr>
+                  <td>{{ l.srl }}</td><td>{{ l.stoneCode }}</td><td>{{ l.stoneSub }}</td>
+                  <td class="r">{{ l.weight }}</td><td class="r">{{ l.rate }}</td>
+                  <td class="r">{{ l.amount }}</td><td class="r">{{ l.taxAmt }}</td>
+                  <td class="r">{{ l.cgst }}</td><td class="r">{{ l.sgst }}</td><td class="r">{{ l.igst }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Payments -->
+        <div class="journal-section">
+          <div class="journal-section-title">
+            CUSTOMER_PAID_AMOUNT
+            <span class="jrow-count">{{ journalData().payments.length }} rows</span>
+          </div>
+          <table class="journal-table">
+            <thead><tr>
+              <th>#</th><th>GL Code</th><th>Account</th><th>Ch. No</th><th class="r">Amount</th>
+            </tr></thead>
+            <tbody>
+              @for (p of journalData().payments; track p.srl) {
+                <tr>
+                  <td>{{ p.srl }}</td><td>{{ p.glCode }}</td>
+                  <td>{{ p.accName ?? '—' }}</td><td>{{ p.chno || '—' }}</td>
+                  <td class="r">{{ p.amount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- GST Summary -->
+        <div class="journal-section">
+          <div class="journal-section-title">
+            GST_TAXSUMMARY_DETAIL
+            <span class="jrow-count">{{ journalData().gstSummary.length }} rows</span>
+          </div>
+          <table class="journal-table">
+            <thead><tr>
+              <th>#</th><th>HSN</th>
+              <th class="r">CGST%</th><th class="r">CGST Amt</th>
+              <th class="r">SGST%</th><th class="r">SGST Amt</th>
+              <th class="r">IGST%</th><th class="r">IGST Amt</th>
+              <th class="r">Total Tax</th><th class="r">Taxable</th>
+            </tr></thead>
+            <tbody>
+              @for (g of journalData().gstSummary; track g.srl) {
+                <tr>
+                  <td>{{ g.srl }}</td><td>{{ g.hsncode }}</td>
+                  <td class="r">{{ g.cgstRt }}</td><td class="r">{{ g.cgstAmt }}</td>
+                  <td class="r">{{ g.sgstRt }}</td><td class="r">{{ g.sgstAmt }}</td>
+                  <td class="r">{{ g.igstRt }}</td><td class="r">{{ g.igstAmt }}</td>
+                  <td class="r">{{ g.totTax }}</td><td class="r">{{ g.txabamt }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+      }
+    </div>
+  }
+
+</div>

@@ -1,0 +1,197 @@
+<div class="register-page">
+
+  <!-- ── Page header ───────────────────────────────────────────────────── -->
+  <header class="page-head">
+    <div class="title-row">
+      <div>
+        <h2><mat-icon class="title-ic">diamond</mat-icon>Stone Purchase Register</h2>
+        <p class="hint">Filter by date, dealer, or amount. Click a row to view or print the voucher.</p>
+      </div>
+      @if (searched() && rows().length) {
+        <div class="kpis">
+          <div class="kpi">
+            <span class="kpi-label">Vouchers</span>
+            <span class="kpi-value">{{ totals().count }}</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Total Amt</span>
+            <span class="kpi-value">{{ fmt(totals().totalAmount) }}</span>
+          </div>
+          <div class="kpi accent">
+            <span class="kpi-label">Grand Total</span>
+            <span class="kpi-value">{{ fmt(totals().grandTotal) }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  </header>
+
+  <!-- ── Filter card ────────────────────────────────────────────────────── -->
+  <form class="filter-card" [formGroup]="form" (ngSubmit)="onProceed()">
+    <div class="filter-row">
+      <label>
+        <span>Start Date</span>
+        <input type="date" formControlName="from" />
+      </label>
+      <label>
+        <span>End Date</span>
+        <input type="date" formControlName="to" />
+      </label>
+      <label>
+        <span>TranCode</span>
+        <select formControlName="trancode">
+          <option value="RTP">RTP — Stone Purchase</option>
+          <option value="ITP">ITP — Stone Purchase Return</option>
+        </select>
+      </label>
+      <label>
+        <span>Dealer</span>
+        <select formControlName="dealerCode">
+          <option value="">&lt;&lt;All&gt;&gt;</option>
+          @for (d of dealers(); track d.code) {
+            <option [value]="d.code">{{ d.code }} — {{ d.name }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    <div class="filter-row">
+      <label>
+        <span>Voucher No. <small class="muted">(exact)</small></span>
+        <input type="text" formControlName="vounum" placeholder="e.g. SP000055"
+               (input)="onVounumExactInput()" />
+      </label>
+      <label>
+        <span>Voucher From</span>
+        <input type="text" formControlName="vounumFrom" placeholder="SP000001"
+               [attr.disabled]="form?.value?.vounum ? '' : null" />
+      </label>
+      <label>
+        <span>Voucher To</span>
+        <input type="text" formControlName="vounumTo" placeholder="SP999999"
+               [attr.disabled]="form?.value?.vounum ? '' : null" />
+      </label>
+      <label class="amount">
+        <span>Amount ≥</span>
+        <input type="number" formControlName="minAmount" min="0" step="0.01" />
+      </label>
+    </div>
+
+    <div class="filter-actions">
+      <button type="button" class="btn ghost" (click)="onClear()">
+        <mat-icon>refresh</mat-icon> Clear
+      </button>
+      <button type="submit" class="btn primary" [disabled]="loading()">
+        <mat-icon>{{ loading() ? 'hourglass_empty' : 'search' }}</mat-icon>
+        {{ loading() ? 'Loading…' : 'Proceed' }}
+      </button>
+    </div>
+  </form>
+
+  <!-- ── Results ────────────────────────────────────────────────────────── -->
+  @if (searched()) {
+    <section class="results">
+
+      <div class="results-head">
+        <strong>{{ totals().count }}</strong>
+        voucher{{ totals().count === 1 ? '' : 's' }} found
+        @if (rows().length) {
+          <div class="export-group">
+            <button class="csv-btn" type="button" (click)="exportCsv()">
+              <mat-icon>download</mat-icon> Export CSV
+            </button>
+            <button class="csv-btn" type="button" (click)="exportPdf()">
+              <mat-icon>picture_as_pdf</mat-icon> Export PDF
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (rows().length) {
+        <div class="table-wrap">
+          <table class="result-grid">
+            <thead>
+              <tr>
+                <th class="sortable" (click)="toggleSort('vounum')">
+                  <span class="th">Voucher No. <mat-icon class="ic">{{ sortIcon('vounum') }}</mat-icon></span>
+                </th>
+                <th class="sortable" (click)="toggleSort('voudate')">
+                  <span class="th">Date <mat-icon class="ic">{{ sortIcon('voudate') }}</mat-icon></span>
+                </th>
+                <th class="sortable" (click)="toggleSort('dealerName')">
+                  <span class="th">Dealer <mat-icon class="ic">{{ sortIcon('dealerName') }}</mat-icon></span>
+                </th>
+                <th class="sortable" (click)="toggleSort('refBillNo')">
+                  <span class="th">Ref. Bill <mat-icon class="ic">{{ sortIcon('refBillNo') }}</mat-icon></span>
+                </th>
+                <th class="num sortable" (click)="toggleSort('totalAmount')">
+                  <span class="th">Total Amt <mat-icon class="ic">{{ sortIcon('totalAmount') }}</mat-icon></span>
+                </th>
+                <th class="num sortable" (click)="toggleSort('discAmt')">
+                  <span class="th">Discount <mat-icon class="ic">{{ sortIcon('discAmt') }}</mat-icon></span>
+                </th>
+                <th class="num sortable" (click)="toggleSort('taxAmt')">
+                  <span class="th">GST <mat-icon class="ic">{{ sortIcon('taxAmt') }}</mat-icon></span>
+                </th>
+                <th class="num sortable" (click)="toggleSort('grandTotal')">
+                  <span class="th">Grand Total <mat-icon class="ic">{{ sortIcon('grandTotal') }}</mat-icon></span>
+                </th>
+                <th>Narration</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of sortedRows(); track r.vounum) {
+                <tr [class.cancelled]="r.cancel === 1" (click)="openVoucher(r)">
+                  <td class="mono">
+                    {{ r.vounum }}
+                    @if (r.cancel === 1) { <span class="badge cancel">CANCELLED</span> }
+                  </td>
+                  <td>{{ fmtDate(r.voudate) }}</td>
+                  <td class="dealer-cell">
+                    <span class="dealer-name">{{ r.dealerName ?? '—' }}</span>
+                    @if (r.dealerCode) { <span class="dealer-code">{{ r.dealerCode }}</span> }
+                  </td>
+                  <td>{{ r.refBillNo ?? '' }}</td>
+                  <td class="num">{{ fmt(r.totalAmount) }}</td>
+                  <td class="num">{{ fmt(r.discAmt) }}</td>
+                  <td class="num">{{ fmt(r.taxAmt) }}</td>
+                  <td class="num bold">{{ fmt(r.grandTotal) }}</td>
+                  <td class="narr" [title]="r.narration ?? ''">{{ r.narration ?? '' }}</td>
+                  <td class="row-action">
+                    <mat-icon title="Open voucher">chevron_right</mat-icon>
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4">Total ({{ totals().count }})</td>
+                <td class="num">{{ fmt(totals().totalAmount) }}</td>
+                <td class="num">{{ fmt(totals().discAmt) }}</td>
+                <td class="num">{{ fmt(totals().taxAmt) }}</td>
+                <td class="num strong">{{ fmt(totals().grandTotal) }}</td>
+                <td colspan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      } @else if (!loading()) {
+        <div class="empty">
+          <mat-icon>search_off</mat-icon>
+          <h3>No vouchers matched the filter</h3>
+          <p>Try widening the date range, switching the TranCode, or clearing the dealer filter.</p>
+        </div>
+      }
+    </section>
+  } @else {
+    <div class="hint-card">
+      <mat-icon>filter_alt</mat-icon>
+      <div>
+        <strong>Set your filters and click Proceed</strong>
+        <p>Defaults to the current Indian Financial Year. Adjust to see older or newer vouchers.</p>
+      </div>
+    </div>
+  }
+
+</div>

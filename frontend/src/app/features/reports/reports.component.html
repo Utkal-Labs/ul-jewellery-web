@@ -1,0 +1,144 @@
+<div class="reports-layout">
+
+  <!-- ── Sidebar (VB6 &Report menu mirror) ────────────────────────────── -->
+  <aside class="reports-sidebar">
+
+    <div class="side-head">
+      <div class="side-title">
+        <mat-icon class="title-icon">assessment</mat-icon>
+        <span>Reports</span>
+      </div>
+      <div class="side-search">
+        <mat-icon>search</mat-icon>
+        <input type="text"
+               [ngModel]="query()"
+               (ngModelChange)="query.set($event)"
+               placeholder="Filter report names…"
+               title="Filters this menu by report name. To find a specific voucher, open Stone Purchase Register and use the Voucher No. field."
+               aria-label="Filter report names" />
+        @if (query()) {
+          <button class="clear-btn" (click)="query.set('')" aria-label="Clear filter">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="side-scroll">
+      @for (c of filtered(); track c.title) {
+        <div class="category" [class.expanded]="c.expanded">
+          <button class="cat-head" type="button" (click)="toggle(c)">
+            <mat-icon class="chev">{{ c.expanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+            <span>{{ c.title }}</span>
+            <span class="cat-count">{{ c.items.length }}</span>
+          </button>
+          @if (c.expanded) {
+            <ul class="cat-items">
+              @for (it of c.items; track it.label) {
+                <li>
+                  @if (it.sub?.length) {
+                    <button class="rep-link sub-head" type="button" (click)="toggleEntry(it)">
+                      <mat-icon class="chev">{{ isExpanded(it) ? 'expand_more' : 'chevron_right' }}</mat-icon>
+                      <span class="grow">{{ it.label }}</span>
+                      @if (it.shortcut) { <kbd class="shortcut">{{ it.shortcut }}</kbd> }
+                    </button>
+                    @if (isExpanded(it)) {
+                      <ul class="sub-items">
+                        @for (s of it.sub; track s.label) {
+                          <li>
+                            @if (s.disabled || !s.route) {
+                              <span class="rep-link disabled" title="Coming soon">
+                                <span class="grow">{{ s.label }}</span>
+                                @if (s.shortcut) { <kbd class="shortcut">{{ s.shortcut }}</kbd> }
+                              </span>
+                            } @else {
+                              <a class="rep-link" [routerLink]="s.route" routerLinkActive="active">
+                                <span class="grow">{{ s.label }}</span>
+                                @if (s.shortcut) { <kbd class="shortcut">{{ s.shortcut }}</kbd> }
+                              </a>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    }
+                  } @else if (it.disabled || !it.route) {
+                    <span class="rep-link disabled" title="Coming soon">
+                      <span class="grow">{{ it.label }}</span>
+                      @if (it.shortcut) { <kbd class="shortcut">{{ it.shortcut }}</kbd> }
+                    </span>
+                  } @else {
+                    <a class="rep-link" [routerLink]="it.route" routerLinkActive="active">
+                      <span class="grow">{{ it.label }}</span>
+                      @if (it.shortcut) { <kbd class="shortcut">{{ it.shortcut }}</kbd> }
+                    </a>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+      @if (!filtered().length) {
+        <div class="no-match">
+          <mat-icon>search_off</mat-icon>
+          <p>No reports match "{{ query() }}"</p>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <!-- ── Main panel ──────────────────────────────────────────────────────── -->
+  <main class="reports-main">
+    @if (isLanding()) {
+      <!-- Landing — shown only when no child route is active -->
+      <div class="landing">
+        <header class="landing-hero">
+          <div class="hero-text">
+            <h1>Reports</h1>
+            <p>Generate, preview and export reports across stones, accounts, sales and more.</p>
+          </div>
+          <mat-icon class="hero-icon">insights</mat-icon>
+        </header>
+
+        <section class="landing-section">
+          <div class="section-head">
+            <h2>Quick Access</h2>
+            <span class="section-hint">{{ quickReports().length }} available</span>
+          </div>
+          <div class="card-grid">
+            @for (r of quickReports(); track r.route) {
+              <a class="report-card" [routerLink]="r.route">
+                <div class="card-icon"><mat-icon>description</mat-icon></div>
+                <div class="card-body">
+                  <div class="card-title">{{ r.label }}</div>
+                  <div class="card-sub">{{ r.category }}</div>
+                </div>
+                <mat-icon class="card-arrow">arrow_forward</mat-icon>
+              </a>
+            }
+          </div>
+        </section>
+
+        <section class="landing-section">
+          <div class="section-head">
+            <h2>All Categories</h2>
+            <span class="section-hint">Click a category to browse</span>
+          </div>
+          <div class="cat-grid">
+            @for (c of categories; track c.title) {
+              <button class="cat-card" type="button" (click)="c.expanded = true">
+                <mat-icon>folder_open</mat-icon>
+                <span class="cat-card-title">{{ c.title }}</span>
+                <span class="cat-card-count">{{ c.items.length }} reports</span>
+              </button>
+            }
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- Routed report content renders here when a child route is active -->
+    <router-outlet />
+  </main>
+
+</div>

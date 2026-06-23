@@ -1,0 +1,101 @@
+<div class="page">
+
+  <header class="page-head">
+    <div>
+      <h2><mat-icon>account_balance_wallet</mat-icon>Customer / Account Ledger</h2>
+      <p class="hint">
+        Sub-report — pick an account, see its header info, opening/closing balances,
+        and a running-balance ledger of every transaction in the date range.
+      </p>
+    </div>
+  </header>
+
+  <!-- Filter -->
+  <form class="filter-card" [formGroup]="form" (ngSubmit)="onProceed()">
+    <div class="filter-grid">
+      <label class="col-2">
+        <span>Account</span>
+        <select formControlName="glCode">
+          <option value="">— select an account —</option>
+          @for (a of accountOptions(); track a.glCode) {
+            <option [value]="a.glCode">{{ a.accName }}@if (a.accCode) { ({{ a.accCode }}) }</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>From Date</span>
+        <input type="date" formControlName="from" />
+      </label>
+      <label>
+        <span>To Date</span>
+        <input type="date" formControlName="to" />
+      </label>
+    </div>
+    <div class="filter-actions">
+      <button type="button" class="btn ghost" (click)="onClear()">
+        <mat-icon>refresh</mat-icon> Clear
+      </button>
+      <button type="submit" class="btn primary" [disabled]="loading() || !form.value.glCode">
+        <mat-icon>{{ loading() ? 'hourglass_empty' : 'search' }}</mat-icon>
+        {{ loading() ? 'Loading…' : 'Proceed' }}
+      </button>
+    </div>
+  </form>
+
+  <!-- Sub-report: Master + Detail -->
+  @if (searched() && data(); as d) {
+    @if (!d.master) {
+      <div class="state empty">
+        <mat-icon>account_circle_off</mat-icon>
+        <h3>Account not found</h3>
+      </div>
+    } @else {
+      <!-- Master block -->
+      <section class="master-card">
+        <div class="m-row">
+          <div class="m-cell">
+            <span class="m-label">Account</span>
+            <span class="m-value strong">{{ d.master.accName }}</span>
+            @if (d.master.accCode) { <span class="m-sub">{{ d.master.accCode }}</span> }
+          </div>
+          <div class="m-cell">
+            <span class="m-label">GL Code</span>
+            <span class="m-value mono">{{ d.master.glCode }}</span>
+          </div>
+          <div class="m-cell">
+            <span class="m-label">Group</span>
+            <span class="m-value">{{ d.master.accGroup ?? '—' }}</span>
+          </div>
+        </div>
+        @if (d.master.address1 || d.master.address2 || d.master.address3) {
+          <div class="m-row">
+            <div class="m-cell wide">
+              <span class="m-label">Address</span>
+              <span class="m-value">{{ masterAddress() }}</span>
+            </div>
+          </div>
+        }
+      </section>
+
+      <!-- Detail block (nested report) -->
+      <app-report-results-table
+        [columns]="columns"
+        [rows]="d.transactions"
+        [loading]="loading()"
+        [kpis]="kpis()"
+        [rowClickable]="false"
+        csvFilename="customer-ledger"
+        emptyTitle="No transactions in this range"
+        emptyHint="Try widening the date range." />
+    }
+  } @else if (!searched()) {
+    <div class="hint-card">
+      <mat-icon>info</mat-icon>
+      <div>
+        <strong>Pick an account and click Proceed</strong>
+        <p>Opening balance includes the account's carry-forward opening and all transactions before the From Date.</p>
+      </div>
+    </div>
+  }
+
+</div>
