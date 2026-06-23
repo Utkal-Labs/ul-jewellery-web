@@ -14,7 +14,7 @@ import { AuthService } from '../../core/auth/auth.service';
     <div class="login-wrapper">
       <mat-card class="login-card">
         <mat-card-header>
-          <mat-card-title>Nimbus Jewellery Management</mat-card-title>
+          <mat-card-title>Jewellery Management</mat-card-title>
           <mat-card-subtitle>Please sign in to continue</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>

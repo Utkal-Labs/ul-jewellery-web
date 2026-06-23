@@ -10,7 +10,7 @@ import { AuthService } from '../core/auth/auth.service';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule, MatButtonModule],
   template: `
     <div class="app-menubar">
-      <span class="app-title">Nimbus Jewellery Management System</span>
+      <span class="app-title">Jewellery Management System</span>
       <nav class="nav-links">
         <a routerLink="/stone-purchase" routerLinkActive="active"
            [routerLinkActiveOptions]="{ exact: true }">Stone Purchase</a>
